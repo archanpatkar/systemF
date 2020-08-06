@@ -1,2 +1,2 @@
 # SystemF
-System F Typed Lambda Calculus
+System F polymorphic/second-order lambda calculus interpreter
