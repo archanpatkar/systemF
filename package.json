@@ -1,0 +1,19 @@
+{
+  "name": "systemf",
+  "version": "1.0.0",
+  "description": "System F polymorphic/second-order lambda calculus interpreter",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/archanpatkar/SystemF.git"
+  },
+  "author": "Archan Patkar",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/archanpatkar/SystemF/issues"
+  },
+  "homepage": "https://github.com/archanpatkar/SystemF#readme"
+}
