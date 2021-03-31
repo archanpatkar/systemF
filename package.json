@@ -15,5 +15,9 @@
   "bugs": {
     "url": "https://github.com/archanpatkar/SystemF/issues"
   },
-  "homepage": "https://github.com/archanpatkar/SystemF#readme"
+  "homepage": "https://github.com/archanpatkar/SystemF#readme",
+  "dependencies": {
+    "saman": "^0.0.2",
+    "styp": "^0.0.2"
+  }
 }
