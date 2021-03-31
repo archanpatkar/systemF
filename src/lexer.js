@@ -1,6 +1,17 @@
-const symbols = ["(", ")", "\\", ".", "+", "-", "/", "*", "->",":","@","?","[","]"];
-const types = ["int", "bool"];
-const keywords = ["if", "else", "then", "true", "false"];
+const symbols = [
+    "(", ")", "\\", ".", "+", "-", "&", "=", 
+    "<", ">", "=", "/", "*", "->",":", "?",",","$"
+];
+
+// temp extra
+// token_name.set("@","FORALL");
+// "@", "|", "fix",
+
+const types = ["int", "bool", "char", "unit"];
+const keywords = [
+    "if", "else", "then", "true", "false", 
+    "let", "not", "and", "or", "in"
+];
 
 const token_name = new Map();
 token_name.set("(", "LPAREN");
@@ -15,10 +26,17 @@ token_name.set("-", "SUB");
 token_name.set("*", "MUL");
 token_name.set("/", "DIV");
 token_name.set("->", "TO");
+token_name.set(">", "GT");
+token_name.set("<", "LT");
+token_name.set("=", "EQ");
+token_name.set("let", "LET");
+token_name.set("in", "IN");
 token_name.set("if", "IF");
 token_name.set("else", "ELSE");
 token_name.set("then", "THEN");
-token_name.set("@","FORALL");
+token_name.set("not", "NOT");
+token_name.set("and", "AND");
+token_name.set("or", "OR");
 token_name.set("?","TYPELAM");
 
 const white = [" ", "\n", "\b", "\t", "\r"];
@@ -72,10 +90,10 @@ function tokenize(string) {
             }
             tokens.push(token("LIT", parseInt(n)));
         }
-        else if (isAlphabet(ch)) {
+        else if (isAlphabet(ch)|| ch == "_") {
             n = "" + ch;
             ch = string[++curr];
-            while (isAlphabet(ch)) {
+            while (isAlphabet(ch) || isNumber(ch) || ch == "_") {
                 n += ch;
                 ch = string[++curr];
             }

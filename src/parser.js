@@ -1,18 +1,33 @@
 // TDOP/Pratt Parser
 // Based on http://crockford.com/javascript/tdop/tdop.html
 const tokenize = require("./lexer");
+const { Expr } = require("./ast");
 
 // AST Nodes
-const Lam = (param, type, body) => ({ node: "lambda", param: param, type: type, body: body });
-const Lit = (type, val) => ({ node: "literal", type: type, val: val });
-const Var = (name) => ({ node: "var", name: name });
-const App = (lam, param) => ({ node: "apply", exp1: lam, exp2: param });
-const Condition = (cond,e1,e2) => ({ node: "condition", cond:cond, exp1: e1, exp2: e2 });
-const BinOp = (op, l, r) => ({ node: op, l: l, r: r });
-const UnOp = (op,v) => ({ node: op, val: v });
+// const Lam = (param, type, body) => ({ node: "lambda", param: param, type: type, body: body });
+// const Lit = (type, val) => ({ node: "literal", type: type, val: val });
+// const Var = (name) => ({ node: "var", name: name });
+// const App = (lam, param) => ({ node: "apply", exp1: lam, exp2: param });
+// const Condition = (cond,e1,e2) => ({ node: "condition", cond:cond, exp1: e1, exp2: e2 });
+// const BinOp = (op, l, r) => ({ node: op, l: l, r: r });
+// const UnOp = (op,v) => ({ node: op, val: v });
 
-const ops = ["ADD","SUB","DIV","MUL","NEG"];
-const not = ["EOF","RPAREN","TO","DEFT","BODY","THEN","ELSE"];
+const ops = ["ADD", "SUB", "DIV", "MUL", "AND", "OR", "GT", "LT", "EQ", "NEG", "NOT"];
+const not = ["EOF", "RPAREN", "BODY", "IN", "THEN", "ELSE", "COMMA"];
+
+// Prec table
+// or - 1
+// and - 2
+// eq - 3
+// gt - 4
+// lt - 4
+// add - 5
+// sub - 5
+// mul - 6
+// div - 6
+// neg - 7
+// not - 7
+// apply - 8
 
 const handlers = {
     "IDEN": {
@@ -182,21 +197,26 @@ class Parser {
             left = multiThis(handlers[token.type].nud,handlers[token.type],this)(token);
         }
         token = this.peek();
-        while(ops.includes(token.type) && min < handlers[token.type].lbp) {
+        while(ops.includes(token.type) && min <= handlers[token.type].lbp && token.value != 0) {
             token = this.consume();
             left = multiThis(handlers[token.type].led,handlers[token.type],this)(left);
             token = this.peek();
         }
-        while(!not.includes(this.peek().type) && min < handlers["APPLY"].lbp) {
-            left = multiThis(handlers["APPLY"].led,handlers[token.type],this)(left);
-            if(ops.includes(this.peek().type)) left = this.expression(0,left);
+        token = this.peek();
+        while(!not.includes(token.type) && !ops.includes(token.type) && min < handlers["APPLY"].lbp && token.value != 0) {
+            left = multiThis(handlers["APPLY"].led,handlers["APPLY"],this)(left);
+            token = this.peek();
+            if(ops.includes(token.type)) left = this.expression(0,left);
         }
         return left;
     }
 
     parse(str) {
         this.tokens = tokenize(str);
-        return this.expression(0);
+        const e = this.expression(0);
+        const token = this.peek();
+        if(token.value != 0 && not.includes(token.type)) this.expect(null,`Unexpected keyword ${token.value}`)
+        return e;
     }
 }
 
