@@ -7,7 +7,7 @@ const symbols = [
 // token_name.set("@","FORALL");
 // "@", "|", "fix",
 
-const types = ["int", "bool", "char", "unit"];
+const types = ["number", "bool", "unit"];
 const keywords = [
     "if", "else", "then", "true", "false", 
     "let", "not", "and", "or", "in"
@@ -82,13 +82,25 @@ function tokenize(string) {
             else tokens.push(token(token_name.get(ch), ch));
         }
         else if (isNumber(ch)) {
+            let dot = false
             n = "" + ch;
             ch = string[++curr];
-            while (isNumber(ch)) {
+            if(ch == ".") {
+                dot = true;
                 n += ch;
                 ch = string[++curr];
             }
-            tokens.push(token("LIT", parseInt(n)));
+            while (isNumber(ch)) {
+                n += ch;
+                ch = string[++curr];
+                if(ch == "." && !dot)  {
+                    dot = true;
+                    n += ch
+                    ch = string[++curr];
+                }
+                else if(ch == "." && dot) throw new Error("Multiple Dots in Number literal");
+            }
+            tokens.push(token("LIT", parseFloat(n)));
         }
         else if (isAlphabet(ch)|| ch == "_") {
             n = "" + ch;
