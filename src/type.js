@@ -7,7 +7,7 @@
 const { equal } = require("saman");
 const { sum, tagged } = require("saman");
 
-const ops = ["ADD", "SUB", "DIV", "MUL"]
+// const ops = ["ADD", "SUB", "DIV", "MUL"]
 
 // Type Defs
 const Type = sum("Types", {

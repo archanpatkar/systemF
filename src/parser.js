@@ -12,8 +12,8 @@ const { Expr } = require("./ast");
 // const BinOp = (op, l, r) => ({ node: op, l: l, r: r });
 // const UnOp = (op,v) => ({ node: op, val: v });
 
-const ops = ["ADD", "SUB", "DIV", "MUL", "AND", "OR", "GT", "LT", "EQ", "NEG", "NOT"];
-const not = ["EOF", "RPAREN", "BODY", "IN", "THEN", "ELSE", "COMMA"];
+const ops = ["ADD", "SUB", "DIV", "MUL", "LBR", "AND", "OR", "GT", "LT", "EQ", "NEG", "NOT"];
+const not = ["EOF", "DEFT", "DOT", "RPAREN", "BODY", "IN", "THEN", "ELSE", "COMMA"];
 
 // Prec table
 // or - 1
@@ -43,6 +43,11 @@ const handlers = {
     "DOT": {
         nud() {
             this.expect(null,"'.' is not a unary operator");
+        } 
+    },
+    "TO": {
+        nud() {
+            this.expect(null,"'->' is not a unary operator");
         } 
     },
     "IDEN": {
@@ -217,6 +222,7 @@ const handlers = {
     },
     "LAM": {
         nud() {
+            // console.log("here3!");
             const param = this.expression(0);
             // console.log(param.toString());
             if(!Expr.Var.is(param)) this.expect(null,"Expected an identifier");
@@ -232,18 +238,24 @@ const handlers = {
     },
     "TYPELAM": {
         nud() {
+            // console.log("here!");
             const param = this.expression(0);
             // console.log(param.toString());
             if(!Expr.Var.is(param)) this.expect(null,"Expected an identifier");
             this.expect("BODY","Expected '.'");
+            // console.log("here2!");
             const body = this.expression(0);
-            return Expr.TLam(param.name,body);
+            // console.log(body.toString());
+            const node = Expr.TLam(param.name,body);
+            // console.log(node.toString());
+            return node;
         },
         led() {
-            expect(null,"'\\' is not a binary operator");
+            expect(null,"'?' is not a binary operator");
         }
     },
     "LBR": {
+        lbp:8,
         nud() {
             this.expect(null,"'[' not a unary operator");
         },
@@ -254,7 +266,7 @@ const handlers = {
         }
     },
     "APPLY": {
-        lbp:5,
+        lbp:8,
         led(left) {
             const right = this.expression(this.lbp);
             return Expr.App(left,right);
@@ -302,10 +314,11 @@ class Parser {
     type(after) {
         let curr = this.peek();
         if(curr.type === "IDEN" || curr.type === "TYPE") {
-            let t = this.consume();
+            let t = this.consume().value;
             if(this.peek().type == "TO") {
                 this.consume();
                 let t2 = this.type("->");
+                // console.log([t,t2]);
                 return [t,t2];
             }
             else return t;
@@ -344,7 +357,7 @@ class Parser {
 
     parse(str) {
         this.tokens = tokenize(str);
-        console.log(this.tokens);
+        // console.log(this.tokens);
         const e = this.expression(0);
         const token = this.peek();
         if(token.value != 0 && not.includes(token.type)) this.expect(null,`Unexpected keyword ${token.value}`)
@@ -352,7 +365,8 @@ class Parser {
     }
 }
 
-const p1 = new Parser();
-console.log(p1.parse("?a. \\x:a. x"));
-
+// const p1 = new Parser();
+// console.log(p1.parse("?a. \\x:a->a->b. x").toString());
+// console.log(p1.parse("(?a. \\x:a. x) [number]").toString());
+// console.log(p1.parse("(?a. \\x:a. x+5) [number]").toString());
 module.exports = Parser;
