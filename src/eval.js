@@ -131,10 +131,9 @@ const GLOBAL = globalEnv();
 class Interpreter { 
     constructor(global) {
         this.parser = new Parser();
-        this.infer = new TypeVerifier();
+        this.checker = new TypeChecker();
         this.mode = call_by_value;
         this.global = global?global:GLOBAL;
-        Prelude.forEach(f => this.evaluate(f));
     }
 
     setMode(mode) {
@@ -189,9 +188,9 @@ class Interpreter {
 
     evaluate(str) {
         const ast = this.parser.parse(str);
-        const [type, constraints] = this.infer.is(ast);
+        const type = this.checker.prove(ast);
         const output = this.ieval(ast,this.global);
-        return { output, type, constraints };
+        return { output, type };
     }
 }
 

@@ -61,7 +61,7 @@ const handlers = {
         nud() {
             const exp = this.expression(0);
             this.expect("RPAREN", "Unmatched paren '('");
-            if(!exp) return Expr.Lit("unit",Expr.Lam("x",Expr.Var("x")));
+            if(!exp) return Expr.Lit("unit","unit");
             return exp;
         },
         led() {
