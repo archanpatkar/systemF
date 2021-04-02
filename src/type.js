@@ -6,7 +6,7 @@
 
 // Dep
 const { equal } = require("saman");
-const { sum, tagged } = require("saman");
+const { sum, tagged } = require("styp");
 
 // Type Defs
 const Type = sum("Types", {
@@ -19,27 +19,27 @@ const Scheme = sum("Scheme", {
     Forall: ["var", "type"]
 });
 
-const TInt = Type.TCon("int");
+const TNumber = Type.TCon("number");
 const TBool = Type.TCon("bool");
 const TUnit = Type.TCon("unit");
 
 const PrimTypes = {
-    "int":TInt,
+    "number":TNumber,
     "bool":TBool,
     "unit":TUnit
 };
 
 const optypes = {
-    "ADD": Type.TArr(TInt,Type.TArr(TInt,TInt)),
-    "MUL": Type.TArr(TInt,Type.TArr(TInt,TInt)),
-    "SUB": Type.TArr(TInt,Type.TArr(TInt,TInt)),
-    "DIV": Type.TArr(TInt,Type.TArr(TInt,TInt)),
+    "ADD": Type.TArr(TNumber,Type.TArr(TNumber,TNumber)),
+    "MUL": Type.TArr(TNumber,Type.TArr(TNumber,TNumber)),
+    "SUB": Type.TArr(TNumber,Type.TArr(TNumber,TNumber)),
+    "DIV": Type.TArr(TNumber,Type.TArr(TNumber,TNumber)),
     "AND": Type.TArr(TBool,Type.TArr(TBool,TBool)),
     "OR": Type.TArr(TBool,Type.TArr(TBool,TBool)),
-    "GT": Type.TArr(TInt,Type.TArr(TInt,TBool)),
-    "LT": Type.TArr(TInt,Type.TArr(TInt,TBool)),
+    "GT": Type.TArr(TNumber,Type.TArr(TNumber,TBool)),
+    "LT": Type.TArr(TNumber,Type.TArr(TNumber,TBool)),
     "NOT": Type.TArr(TBool,TBool),
-    "NEG": Type.TArr(TInt,TInt),
+    "NEG": Type.TArr(TNumber,TNumber),
     "EQ": Scheme.Forall(
         [Type.TVar("o1"),Type.TVar("o2")],
         Type.TArr(Type.TVar("o1"),Type.TArr(Type.TVar("o2"),TBool))
@@ -47,7 +47,7 @@ const optypes = {
 }
 
 function convertType(type) {
-    if(type === "int") return TInt;
+    if(type === "int") return TNumber;
     if(type === "bool") return TBool;
     if(type === "unit") return TUnit;
     if(typeof type === "string") return Type.TVar(type);
@@ -72,6 +72,7 @@ function printType(type,level=0) {
 const genericError = (msg) => { throw new Error(msg) };
 const notInScope = (name) => genericError(`Variable --> '${name}' not in Scope`);
 const notType = (type,msg) => genericError(`Expected type '${printType(type)}' ${msg}`);
+const notAType = (type) => genericError(`Expected a type`);
 const typeMismatch = (type1,type2) => genericError(`Couldn't match the expected type: ${printType(type1)} with type: ${printType(type2)}`);
 const nonFunction = (type) => genericError(`Tried to apply to non-Function type --> ${type}`);
 
@@ -108,25 +109,6 @@ class TypeChecker {
         this.tenv = new TypeEnv(null);
     }
 
-    // ftv(type) {
-    //     if(Type.is(type)) return type.cata({
-    //         TCon: c => new Set(),
-    //         TVar: ({ v }) => new Set([v]),
-    //         TArr: ({ t1, t2 }) => new Set([...this.ftv(t1), ...this.ftv(t2)])
-    //     });
-    //     if (Scheme.is(type)) {
-    //         const bounded = new Set(type.var.map(v => v.v));
-    //         return new Set([...(this.ftv(type.type))].filter(v => !bounded.has(v)));
-    //     }
-    //     return null;
-    // }
-
-    // ftvEnv(env) {
-    //     const curr = Object.values(env.env).map(t => Array.from(this.ftv(t)));
-    //     if(env.parent) curr.push([...(this.ftvEnv(env.parent))]);
-    //     return new Set(curr.flat());
-    // }
-
     varInit() {
         this.names = {};
         this.count = 0;
@@ -142,114 +124,120 @@ class TypeChecker {
     }
 
     verifyType(type) {
-        return Type.is(type) || Scheme.is(type) || this.tenv.exists(type.v);
+        return Type.is(type) || Scheme.is(type);
     }
 
-    inferLet(ast,env) {
-        if (env.exists(ast.name)) defInScope(ast.name);
-        const t1 = this.infer(ast.e1,env);
-        const tdash = this.generalize(t1,this.applyEnv(env,this.subst));
-        if(ast.e2) {
-            const ne = new TypeEnv(env);
-            ne.addBinding(ast.name, tdash);
-            return this.infer(ast.e2,ne);
-        }
-        env.addBinding(ast.name,tdash);
-        return tdash;
+    checkCond(ast,env) {
+        const cond = this.check(ast.cond, env);
+        const t1 = this.check(ast.e1, env);
+        const t2 = this.check(ast.e2, env);
+        if(!equal(cond,TBool)) typeMismatch(TBool,cond);
+        if(!equal(t1,t2)) typeMismatch(t1,t2);
+        return t1;
     }
 
-    inferCond(ast,env) {
-        const cond = this.infer(ast.cond, env);
-        const t1 = this.infer(ast.e1, env);
-        const t2 = this.infer(ast.e2, env);
-        this.addConstraint(cond,TBool);
-        this.addConstraint(t1, t2);
-        this.unify(cond, TBool);
-        this.unify(t1, t2);
-        return this.apply(t1);
+    checkLet(ast,env) {
+        // if (env.exists(ast.name)) defInScope(ast.name);
+        // const t1 = this.infer(ast.e1,env);
+        // const tdash = this.generalize(t1,this.applyEnv(env,this.subst));
+        // if(ast.e2) {
+        //     const ne = new TypeEnv(env);
+        //     ne.addBinding(ast.name, tdash);
+        //     return this.infer(ast.e2,ne);
+        // }
+        // env.addBinding(ast.name,tdash);
+        // return tdash;
     }
 
     checkTLam(ast,env) {
-        const tv = this.fresh();
-        const ne = new TypeEnv(env);
-        ne.addBinding(ast.param, Scheme.Forall([],tv));
-        const body = this.infer(ast.body, ne);
-        return this.apply(Type.TArr(tv, body));
+        // const tv = this.fresh();
+        // const ne = new TypeEnv(env);
+        // ne.addBinding(ast.param, Scheme.Forall([],tv));
+        // const body = this.infer(ast.body, ne);
+        // return this.apply(Type.TArr(tv, body));
     }
 
     checkLam(ast,env) {
-        const tv = this.fresh();
+        const vt = convertType(ast.type);
+        if(!this.verifyType(vt)) notAType(vt);
         const ne = new TypeEnv(env);
-        ne.addBinding(ast.param, Scheme.Forall([],tv));
-        const body = this.infer(ast.body, ne);
-        return this.apply(Type.TArr(tv, body));
+        ne.addBinding(ast.param, vt);
+        // console.log(ne);
+        const body = this.check(ast.body, ne);
+        return Type.TArr(vt, body);
     }
 
     checkApp(ast,env) {
-        const t1 = this.infer(ast.e1, env);
-        const t2 = this.infer(ast.e2, this.applyEnv(env));
-        const tv = this.fresh();
-        this.addConstraint(t1, Type.TArr(t2,tv));
-        this.unify(this.apply(t1), Type.TArr(t2, tv));
-        return this.apply(tv);
+        const t1 = this.check(ast.e1, env);
+        const t2 = this.check(ast.e2, env);
+        console.log(t1.t1);
+        console.log(t2);
+        if(!Type.TArr.is(t1)) nonFunction(t1);
+        if(!equal(t1.t1,t2)) typeMismatch(t1.t1,t2);
+        return t1.t2;
     }
 
     checkTApp(ast,env) {
-        const t1 = this.infer(ast.e1, env);
-        const t2 = this.infer(ast.e2, this.applyEnv(env));
-        const tv = this.fresh();
-        this.addConstraint(t1, Type.TArr(t2,tv));
-        this.unify(this.apply(t1), Type.TArr(t2, tv));
-        return this.apply(tv);
+        // const t1 = this.infer(ast.e1, env);
+        // const t2 = this.infer(ast.e2, this.applyEnv(env));
+        // const tv = this.fresh();
+        // this.addConstraint(t1, Type.TArr(t2,tv));
+        // this.unify(this.apply(t1), Type.TArr(t2, tv));
+        // return this.apply(tv);
     }
 
     checkFix(ast,env) {
-        const t = this.infer(ast.e,env);
-        const tv = this.fresh();
-        this.addConstraint(Type.TArr(tv,tv), t);
-        this.unify(Type.TArr(tv,tv),t);
-        return this.apply(tv);
+        // const t = this.infer(ast.e,env);
+        // const tv = this.fresh();
+        // this.addConstraint(Type.TArr(tv,tv), t);
+        // this.unify(Type.TArr(tv,tv),t);
+        // return this.apply(tv);
     }  
 
     checkUnOp(ast,env) {
         const t = this.infer(ast.v,env);
-        const tv = this.fresh();
-        this.addConstraint(Type.TArr(t,tv), optypes[ast.op]);
-        this.unify(Type.TArr(t,tv),optypes[ast.op]);
-        return this.apply(tv);
+        const op = optypes[ast.op];
+        if(!equal(op.t1,t)) typeMismatch(op.t1,t);
+        return op.t2;
     }
     
     checkBinOp(ast,env) {
-        const t1 = this.infer(ast.l,env);
-        const t2 = this.infer(ast.r,env);
-        const tv = this.fresh();
+        const t1 = this.check(ast.l,env);
+        const t2 = this.check(ast.r,env);
         let op = optypes[ast.op];
-        if(Scheme.Forall.is(op)) op = this.instantiate(op);
-        this.addConstraint(Type.TArr(t1,Type.TArr(t2,tv)), op);
-        this.unify(Type.TArr(t1,Type.TArr(t2,tv)),op);
-        return this.apply(tv);
+        if(Type.is(op)) {
+            if(!equal(op.t1,t1)) typeMismatch(op.t1,t1);
+            if(!equal(op.t2.t1,t2)) typeMismatch(op.t2.t1,t2);
+            return op.t2.t2;
+        }
+        // if(Scheme.Forall.is(op)) op = this.instantiate(op);
+        // this.addConstraint(Type.TArr(t1,Type.TArr(t2,tv)), op);
+        // this.unify(Type.TArr(t1,Type.TArr(t2,tv)),op);
+        return TUnit;
     }
 
     checkPair(ast,env) {
-        const fst = this.infer(ast.fst,env);
-        const snd = this.infer(ast.snd,env);
-        const tv = this.fresh();
-        return Type.TArr(Type.TArr(fst,Type.TArr(snd,tv)),tv);
+        // const fst = this.infer(ast.fst,env);
+        // const snd = this.infer(ast.snd,env);
+        // const tv = this.fresh();
+        // return Type.TArr(Type.TArr(fst,Type.TArr(snd,tv)),tv);
     }
 
+    // Pair: p => this.inferPair(p,env),
     check(ast, env = this.env) {
-        if(Type.TVar.is(ast)) return this.tenv.lookUp(ast.v);
+        // if(Type.TVar.is(ast)) return this.tenv.lookUp(ast.v);
         return ast.cata({
             Lit: ({ type }) => PrimTypes[type],
-            Var: ({ name }) => this.lookUp(name,env),
-            Pair: p => this.inferPair(p,env),
-            UnOp: u => this.inferUnOp(u,env),
-            BinOp: b => this.inferBinOp(b,env),
-            Let: lb => this.inferLet(lb,env),
-            Cond: c => this.inferCond(c,env),
-            Lam: l => this.inferLam(l,env),
-            App: a => this.inferApp(a,env),
-            Fix: f => this.inferFix(f,env)
+            Var: ({ name }) => env.lookUp(name),
+            UnOp: u => this.checkUnOp(u,env),
+            BinOp: b => this.checkBinOp(b,env),
+            Cond: c => this.checkCond(c,env),
+            Lam: l => this.checkLam(l,env),
+            App: a => this.checkApp(a,env),
+            Fix: f => this.checkFix(f,env),
+            TApp: a => this.checkTApp(a,env),
+            TLam: t => this.checkTLam(t,env),
+            Let: lb => this.checkLet(lb,env)
         });
     }
 
@@ -302,5 +290,11 @@ class TypeChecker {
         return printType(this.check(ast))
     }
 }
+
+// (?a. \x:a->a. x) [int->int]
+// (\x:int->int. x 3) (\x:int. x + 10)
+
+console.log("Checking!");
+console.log(equal(Type.TArr(TNumber,TNumber),Type.TArr(TNumber,TNumber)))
 
 module.exports = TypeChecker;
