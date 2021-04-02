@@ -108,24 +108,24 @@ class TypeChecker {
         this.tenv = new TypeEnv(null);
     }
 
-    ftv(type) {
-        if(Type.is(type)) return type.cata({
-            TCon: c => new Set(),
-            TVar: ({ v }) => new Set([v]),
-            TArr: ({ t1, t2 }) => new Set([...this.ftv(t1), ...this.ftv(t2)])
-        });
-        if (Scheme.is(type)) {
-            const bounded = new Set(type.var.map(v => v.v));
-            return new Set([...(this.ftv(type.type))].filter(v => !bounded.has(v)));
-        }
-        return null;
-    }
+    // ftv(type) {
+    //     if(Type.is(type)) return type.cata({
+    //         TCon: c => new Set(),
+    //         TVar: ({ v }) => new Set([v]),
+    //         TArr: ({ t1, t2 }) => new Set([...this.ftv(t1), ...this.ftv(t2)])
+    //     });
+    //     if (Scheme.is(type)) {
+    //         const bounded = new Set(type.var.map(v => v.v));
+    //         return new Set([...(this.ftv(type.type))].filter(v => !bounded.has(v)));
+    //     }
+    //     return null;
+    // }
 
-    ftvEnv(env) {
-        const curr = Object.values(env.env).map(t => Array.from(this.ftv(t)));
-        if(env.parent) curr.push([...(this.ftvEnv(env.parent))]);
-        return new Set(curr.flat());
-    }
+    // ftvEnv(env) {
+    //     const curr = Object.values(env.env).map(t => Array.from(this.ftv(t)));
+    //     if(env.parent) curr.push([...(this.ftvEnv(env.parent))]);
+    //     return new Set(curr.flat());
+    // }
 
     varInit() {
         this.names = {};
@@ -141,6 +141,9 @@ class TypeChecker {
         return Type.TVar(`${pair[0]}${n?n:""}`);
     }
 
+    verifyType(type) {
+        return Type.is(type) || Scheme.is(type) || this.tenv.exists(type.v);
+    }
 
     inferLet(ast,env) {
         if (env.exists(ast.name)) defInScope(ast.name);
@@ -166,7 +169,7 @@ class TypeChecker {
         return this.apply(t1);
     }
 
-    inferLam(ast,env) {
+    checkTLam(ast,env) {
         const tv = this.fresh();
         const ne = new TypeEnv(env);
         ne.addBinding(ast.param, Scheme.Forall([],tv));
@@ -174,7 +177,15 @@ class TypeChecker {
         return this.apply(Type.TArr(tv, body));
     }
 
-    inferApp(ast,env) {
+    checkLam(ast,env) {
+        const tv = this.fresh();
+        const ne = new TypeEnv(env);
+        ne.addBinding(ast.param, Scheme.Forall([],tv));
+        const body = this.infer(ast.body, ne);
+        return this.apply(Type.TArr(tv, body));
+    }
+
+    checkApp(ast,env) {
         const t1 = this.infer(ast.e1, env);
         const t2 = this.infer(ast.e2, this.applyEnv(env));
         const tv = this.fresh();
@@ -183,7 +194,16 @@ class TypeChecker {
         return this.apply(tv);
     }
 
-    inferFix(ast,env) {
+    checkTApp(ast,env) {
+        const t1 = this.infer(ast.e1, env);
+        const t2 = this.infer(ast.e2, this.applyEnv(env));
+        const tv = this.fresh();
+        this.addConstraint(t1, Type.TArr(t2,tv));
+        this.unify(this.apply(t1), Type.TArr(t2, tv));
+        return this.apply(tv);
+    }
+
+    checkFix(ast,env) {
         const t = this.infer(ast.e,env);
         const tv = this.fresh();
         this.addConstraint(Type.TArr(tv,tv), t);
@@ -191,7 +211,7 @@ class TypeChecker {
         return this.apply(tv);
     }  
 
-    inferUnOp(ast,env) {
+    checkUnOp(ast,env) {
         const t = this.infer(ast.v,env);
         const tv = this.fresh();
         this.addConstraint(Type.TArr(t,tv), optypes[ast.op]);
@@ -199,7 +219,7 @@ class TypeChecker {
         return this.apply(tv);
     }
     
-    inferBinOp(ast,env) {
+    checkBinOp(ast,env) {
         const t1 = this.infer(ast.l,env);
         const t2 = this.infer(ast.r,env);
         const tv = this.fresh();
@@ -210,14 +230,15 @@ class TypeChecker {
         return this.apply(tv);
     }
 
-    inferPair(ast,env) {
+    checkPair(ast,env) {
         const fst = this.infer(ast.fst,env);
         const snd = this.infer(ast.snd,env);
         const tv = this.fresh();
         return Type.TArr(Type.TArr(fst,Type.TArr(snd,tv)),tv);
     }
 
-    infer(ast, env = this.env, tenv = this.tenv) {
+    check(ast, env = this.env) {
+        if(Type.TVar.is(ast)) return this.tenv.lookUp(ast.v);
         return ast.cata({
             Lit: ({ type }) => PrimTypes[type],
             Var: ({ name }) => this.lookUp(name,env),

@@ -11,7 +11,7 @@ const Expr = sum("Expr", {
     Let: ["name","e1","e2"],
     BinOp: ["op","l","r"],
     UnOp: ["op","v"],
-    Pair: ["fst","snd"],
+    // Pair: ["fst","snd"],
     Fix: ["e"]
 });
 
