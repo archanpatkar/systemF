@@ -293,8 +293,4 @@ class TypeChecker {
 
 // (?a. \x:a->a. x) [int->int]
 // (\x:int->int. x 3) (\x:int. x + 10)
-
-console.log("Checking!");
-console.log(equal(Type.TArr(TNumber,TNumber),Type.TArr(TNumber,TNumber)))
-
 module.exports = TypeChecker;
