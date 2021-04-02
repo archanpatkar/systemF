@@ -3,15 +3,6 @@
 const tokenize = require("./lexer");
 const { Expr } = require("./ast");
 
-// AST Nodes
-// const Lam = (param, type, body) => ({ node: "lambda", param: param, type: type, body: body });
-// const Lit = (type, val) => ({ node: "literal", type: type, val: val });
-// const Var = (name) => ({ node: "var", name: name });
-// const App = (lam, param) => ({ node: "apply", exp1: lam, exp2: param });
-// const Condition = (cond,e1,e2) => ({ node: "condition", cond:cond, exp1: e1, exp2: e2 });
-// const BinOp = (op, l, r) => ({ node: op, l: l, r: r });
-// const UnOp = (op,v) => ({ node: op, val: v });
-
 const ops = ["ADD", "SUB", "DIV", "MUL", "LBR", "AND", "OR", "GT", "LT", "EQ", "NEG", "NOT"];
 const not = ["EOF", "DEFT", "DOT", "RPAREN", "BODY", "IN", "THEN", "ELSE", "COMMA"];
 
@@ -28,7 +19,6 @@ const not = ["EOF", "DEFT", "DOT", "RPAREN", "BODY", "IN", "THEN", "ELSE", "COMM
 // neg - 7
 // not - 7
 // apply - 8
-
 const handlers = {
     "COMMA": {
         nud() {
@@ -312,18 +302,22 @@ class Parser {
     }
 
     type(after) {
+        let t;
         let curr = this.peek();
-        if(curr.type === "IDEN" || curr.type === "TYPE") {
-            let t = this.consume().value;
-            if(this.peek().type == "TO") {
-                this.consume();
-                let t2 = this.type("->");
-                // console.log([t,t2]);
-                return [t,t2];
-            }
-            else return t;
+        if(curr.type === "RPAREN") return;
+        if(curr.type === "LPAREN") {
+            this.consume();
+            t = this.type("(");
+            this.expect("RPAREN","Mismatched '(' in type");
         }
-        else this.expect("TYPE",`Expected type or variable after '${after}'`).value;
+        else if(curr.type === "IDEN" || curr.type === "TYPE") t = this.consume().value;
+        if(this.peek().type == "TO") {
+            this.consume();
+            let t2 = this.type("->");
+            return [t,t2];
+        }
+        if(t) return t;
+        this.expect("TYPE",`Expected type or variable after '${after}'`);
     }
 
     expect(next, msg) {
@@ -357,7 +351,6 @@ class Parser {
 
     parse(str) {
         this.tokens = tokenize(str);
-        // console.log(this.tokens);
         const e = this.expression(0);
         const token = this.peek();
         if(token.value != 0 && not.includes(token.type)) this.expect(null,`Unexpected keyword ${token.value}`)
@@ -366,7 +359,8 @@ class Parser {
 }
 
 // const p1 = new Parser();
-// console.log(p1.parse("?a. \\x:a->a->b. x").toString());
+// let node = p1.parse("?a. \\x:(a->(a->int))->b. x")
+// console.log(node.body.type);
 // console.log(p1.parse("(?a. \\x:a. x) [number]").toString());
 // console.log(p1.parse("(?a. \\x:a. x+5) [number]").toString());
 module.exports = Parser;
