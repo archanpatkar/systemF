@@ -17,7 +17,7 @@
   },
   "homepage": "https://github.com/archanpatkar/SystemF#readme",
   "dependencies": {
-    "saman": "^0.0.2",
+    "saman": "^0.0.3",
     "styp": "^0.0.2"
   }
 }
