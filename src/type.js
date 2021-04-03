@@ -41,8 +41,8 @@ const optypes = {
     "NOT": Type.TArr(TBool,TBool),
     "NEG": Type.TArr(TNumber,TNumber),
     "EQ": Scheme.Forall(
-        [Type.TVar("o1"),Type.TVar("o2")],
-        Type.TArr(Type.TVar("o1"),Type.TArr(Type.TVar("o2"),TBool))
+        [Type.TVar("o1")],
+        Type.TArr(Type.TVar("o1"),Type.TArr(Type.TVar("o1"),TBool))
     )
 }
 
@@ -71,10 +71,12 @@ function printType(type,level=0) {
 // Errors
 const genericError = (msg) => { throw new Error(msg) };
 const notInScope = (name) => genericError(`Variable --> '${name}' not in Scope`);
+const defInScope = (name) => genericError(`Cannot redefine Variable: '${name}'`);
 const notType = (type,msg) => genericError(`Expected type '${printType(type)}' ${msg}`);
 const notAType = (type) => genericError(`Expected a type`);
 const typeMismatch = (type1,type2) => genericError(`Couldn't match the expected type: ${printType(type1)} with type: ${printType(type2)}`);
 const nonFunction = (type) => genericError(`Tried to apply to non-Function type --> ${type}`);
+const nonGenFunction = (type) => genericError(`Not ${printType(type)} a Generic / Type Lambda`);
 
 class TypeEnv {
     constructor(parent) {
@@ -89,7 +91,8 @@ class TypeEnv {
     }
 
     addBinding(name, type) {
-        this.env[name] = type
+        if(name in env) defInScope(name);
+        this.env[name] = type;
     }
 
     removeBinding(name) {
@@ -137,24 +140,23 @@ class TypeChecker {
     }
 
     checkLet(ast,env) {
-        // if (env.exists(ast.name)) defInScope(ast.name);
-        // const t1 = this.infer(ast.e1,env);
-        // const tdash = this.generalize(t1,this.applyEnv(env,this.subst));
-        // if(ast.e2) {
-        //     const ne = new TypeEnv(env);
-        //     ne.addBinding(ast.name, tdash);
-        //     return this.infer(ast.e2,ne);
-        // }
-        // env.addBinding(ast.name,tdash);
-        // return tdash;
+        const t1 = this.check(ast.e1,env);
+        if(ast.e2) {
+            const ne = new TypeEnv(env);
+            ne.addBinding(ast.name, tdash);
+            return this.check(ast.e2,ne);
+        }
+        env.addBinding(ast.name,t1);
+        return t1;
     }
 
     checkTLam(ast,env) {
-        // const tv = this.fresh();
-        // const ne = new TypeEnv(env);
-        // ne.addBinding(ast.param, Scheme.Forall([],tv));
-        // const body = this.infer(ast.body, ne);
-        // return this.apply(Type.TArr(tv, body));
+        const tv = convertType(ast.param);
+        if(!this.verifyType(tv)) notAType(tv);
+        this.tenv.addBinding(tv.v, true);
+        const body = this.check(ast.body, env);
+        this.tenv.removeBinding(tv.v);
+        return Scheme.Forall([tv],body);
     }
 
     checkLam(ast,env) {
@@ -162,7 +164,6 @@ class TypeChecker {
         if(!this.verifyType(vt)) notAType(vt);
         const ne = new TypeEnv(env);
         ne.addBinding(ast.param, vt);
-        // console.log(ne);
         const body = this.check(ast.body, ne);
         return Type.TArr(vt, body);
     }
@@ -170,20 +171,30 @@ class TypeChecker {
     checkApp(ast,env) {
         const t1 = this.check(ast.e1, env);
         const t2 = this.check(ast.e2, env);
-        console.log(t1.t1);
-        console.log(t2);
         if(!Type.TArr.is(t1)) nonFunction(t1);
         if(!equal(t1.t1,t2)) typeMismatch(t1.t1,t2);
         return t1.t2;
     }
 
+    rename(scheme,map) {
+        if(Type.TCon.is(scheme)) return scheme;
+        if(Type.TVar.is(scheme)) return map[scheme.v];
+        if(Type.TArr.is(scheme)) return Type.TArr(
+            this.rename(scheme.t1,map),
+            this.rename(scheme.t2,map)
+        );
+        if(Scheme.Forall.is(scheme)) return this.rename(scheme.type,map);
+        return null;
+    }
+
     checkTApp(ast,env) {
-        // const t1 = this.infer(ast.e1, env);
-        // const t2 = this.infer(ast.e2, this.applyEnv(env));
-        // const tv = this.fresh();
-        // this.addConstraint(t1, Type.TArr(t2,tv));
-        // this.unify(this.apply(t1), Type.TArr(t2, tv));
-        // return this.apply(tv);
+        const t1 = this.check(ast.tl, env);
+        const t2 = convertType(ast.t);
+        if(!this.verifyType(t2)) notAType(t2);
+        if(!Scheme.Forall.is(t1)) nonGenFunction(t1);
+        const map = {}
+        map[t1.var[0].v] = t2;
+        return this.rename(t1,map);
     }
 
     checkFix(ast,env) {
@@ -210,22 +221,22 @@ class TypeChecker {
             if(!equal(op.t2.t1,t2)) typeMismatch(op.t2.t1,t2);
             return op.t2.t2;
         }
-        // if(Scheme.Forall.is(op)) op = this.instantiate(op);
-        // this.addConstraint(Type.TArr(t1,Type.TArr(t2,tv)), op);
-        // this.unify(Type.TArr(t1,Type.TArr(t2,tv)),op);
+        // if(Scheme.Forall.is(op)) {
+        //     if(!equal(t1,t2)) typeMismatch(,t1);
+        //     this.rename(scheme,)
+        // }
         return TUnit;
     }
 
-    checkPair(ast,env) {
+    // Pair: p => this.inferPair(p,env),
+    // checkPair(ast,env) {
         // const fst = this.infer(ast.fst,env);
         // const snd = this.infer(ast.snd,env);
         // const tv = this.fresh();
         // return Type.TArr(Type.TArr(fst,Type.TArr(snd,tv)),tv);
-    }
+    // }
 
-    // Pair: p => this.inferPair(p,env),
     check(ast, env = this.env) {
-        // if(Type.TVar.is(ast)) return this.tenv.lookUp(ast.v);
         return ast.cata({
             Lit: ({ type }) => PrimTypes[type],
             Var: ({ name }) => env.lookUp(name),
@@ -240,51 +251,6 @@ class TypeChecker {
             Let: lb => this.checkLet(lb,env)
         });
     }
-
-    // check(ast) {
-    //     if (ast.node == "literal") return ast.type
-    //     if (ast.node == "var") return this.lookUp(ast.name)
-    //     if (ops.includes(ast.node)) {
-    //         const t1 = this.check(ast.l)
-    //         const t2 = this.check(ast.r)
-    //         if (t1 != "int" || t2 != "int") notType("int","for operands");
-    //         return t1;
-    //     }
-    //     if(ast.node == "NEG") {
-    //         const t1 = this.check(ast.val);
-    //         if (t1 != "int") notType("int","for using unary '-' op");
-    //         return t1;
-    //     }
-    //     if (ast.node == "condition") {
-    //         const cond = this.check(ast.cond)
-    //         if (cond != "bool") notType("bool","for 'if' condition");
-    //         const t1 = this.check(ast.exp1)
-    //         const t2 = this.check(ast.exp2)
-    //         if (t1 != t2) generic("Expected same type for both branches");
-    //         return t1;
-    //     }
-    //     else if (ast.node == "lambda") {
-    //         this.addBinding(ast.param, ast.type);
-    //         const type = this.check(ast.body);
-    //         this.removeBinding(ast.param);
-    //         return [ast.type, type];
-    //     }
-    //     else if (ast.node == "apply") {
-    //         const t1 = this.check(ast.exp1);
-    //         const t2 = this.check(ast.exp2);
-    //         if (Array.isArray(t1)) {
-    //             if (
-    //                 Array.isArray(t1[0]) &&
-    //                 Array.isArray(t2) &&
-    //                 arrayEquality(t1[0], t2)
-    //             ) return t1[1];
-    //             else if (t1[0] == t2) return t1[1];
-    //             else typeMismatch(t1[0],t2)
-    //         }
-    //         nonFunction(t1);
-    //     }
-    //     else genericError("Unrecognizable ast node");
-    // }
 
     prove(ast) {
         return printType(this.check(ast))
