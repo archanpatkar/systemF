@@ -216,15 +216,16 @@ class TypeChecker {
         const t1 = this.check(ast.l,env);
         const t2 = this.check(ast.r,env);
         let op = optypes[ast.op];
+        if(Scheme.Forall.is(op)) {   
+            const map = {}
+            map[op.var[0].v] = t1;
+            op = this.rename(op.type,map);
+        }
         if(Type.is(op)) {
             if(!equal(op.t1,t1)) typeMismatch(op.t1,t1);
             if(!equal(op.t2.t1,t2)) typeMismatch(op.t2.t1,t2);
             return op.t2.t2;
         }
-        // if(Scheme.Forall.is(op)) {
-        //     if(!equal(t1,t2)) typeMismatch(,t1);
-        //     this.rename(scheme,)
-        // }
         return TUnit;
     }
 
