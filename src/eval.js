@@ -142,8 +142,8 @@ class Interpreter {
 
     ieval(ast, env) {
         return ast.cata({
-            TLam: t => `<TLambda>`,
-            TApp: ta => this.ieval(ta.tl.body,env),
+            TLam: t => t.body,
+            TApp: ta => this.ieval(this.ieval(ta.tl,env),env),
             Lit: ({ val }) => val,
             Pair: ({ fst, snd }) => pair(
                 this.ieval(fst,env),
@@ -191,7 +191,8 @@ class Interpreter {
     evaluate(str) {
         const ast = this.parser.parse(str);
         const type = this.checker.prove(ast);
-        const output = this.ieval(ast,this.global);
+        let output = this.ieval(ast,this.global);
+        if(Expr.is(output)) output = `<Tlambda>`
         return { output, type };
     }
 }
