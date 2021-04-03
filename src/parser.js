@@ -212,9 +212,7 @@ const handlers = {
     },
     "LAM": {
         nud() {
-            // console.log("here3!");
             const param = this.expression(0);
-            // console.log(param.toString());
             if(!Expr.Var.is(param)) this.expect(null,"Expected an identifier");
             this.expect("DEFT","Expected ':'");
             const type = this.type(":");
@@ -228,16 +226,11 @@ const handlers = {
     },
     "TYPELAM": {
         nud() {
-            // console.log("here!");
             const param = this.expression(0);
-            // console.log(param.toString());
             if(!Expr.Var.is(param)) this.expect(null,"Expected an identifier");
             this.expect("BODY","Expected '.'");
-            // console.log("here2!");
             const body = this.expression(0);
-            // console.log(body.toString());
             const node = Expr.TLam(param.name,body);
-            // console.log(node.toString());
             return node;
         },
         led() {
@@ -341,7 +334,7 @@ class Parser {
             token = this.peek();
         }
         token = this.peek();
-        while(!not.includes(token.type) && !ops.includes(token.type) && min < handlers["APPLY"].lbp && token.value != 0) {
+        while(!not.includes(token.type) && !ops.includes(token.type) && min < handlers["APPLY"].lbp && token.value !== 0) {
             left = multiThis(handlers["APPLY"].led,handlers["APPLY"],this)(left);
             token = this.peek();
             if(ops.includes(token.type)) left = this.expression(0,left);

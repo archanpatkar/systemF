@@ -47,7 +47,7 @@ const optypes = {
 }
 
 function convertType(type) {
-    if(type === "int") return TNumber;
+    if(type === "number") return TNumber;
     if(type === "bool") return TBool;
     if(type === "unit") return TUnit;
     if(typeof type === "string") return Type.TVar(type);
@@ -143,7 +143,7 @@ class TypeChecker {
         const t1 = this.check(ast.e1,env);
         if(ast.e2) {
             const ne = new TypeEnv(env);
-            ne.addBinding(ast.name, tdash);
+            ne.addBinding(ast.name, t1);
             return this.check(ast.e2,ne);
         }
         env.addBinding(ast.name,t1);
@@ -206,7 +206,7 @@ class TypeChecker {
     }  
 
     checkUnOp(ast,env) {
-        const t = this.infer(ast.v,env);
+        const t = this.check(ast.v,env);
         const op = optypes[ast.op];
         if(!equal(op.t1,t)) typeMismatch(op.t1,t);
         return op.t2;
@@ -257,6 +257,9 @@ class TypeChecker {
     }
 }
 
+// let id = (?t. \x:t. x)
+// id [int] 10
+// id [int] 10
 // (?a. \x:a->a. x) [int->int]
 // (\x:int->int. x 3) (\x:int. x + 10)
-module.exports = TypeChecker;
+module.exports = { TypeChecker, PrimTypes };
