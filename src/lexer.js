@@ -83,7 +83,7 @@ function tokenize(string) {
         }
         else if (isNumber(ch)) {
             let dot = false
-            n = "" + ch;
+            let n = "" + ch;
             ch = string[++curr];
             if(ch == ".") {
                 dot = true;
@@ -103,7 +103,7 @@ function tokenize(string) {
             tokens.push(token("LIT", parseFloat(n)));
         }
         else if (isAlphabet(ch)|| ch == "_") {
-            n = "" + ch;
+            let n = "" + ch;
             ch = string[++curr];
             while (isAlphabet(ch) || isNumber(ch) || ch == "_") {
                 n += ch;
