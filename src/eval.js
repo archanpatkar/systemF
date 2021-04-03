@@ -143,7 +143,7 @@ class Interpreter {
     ieval(ast, env) {
         return ast.cata({
             TLam: t => `<TLambda>`,
-            TApp: ta => ta.tl.body,
+            TApp: ta => this.ieval(ta.tl.body,env),
             Lit: ({ val }) => val,
             Pair: ({ fst, snd }) => pair(
                 this.ieval(fst,env),

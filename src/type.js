@@ -1,8 +1,8 @@
 // Type checker
 // Based on -
+// https://www.cs.cornell.edu/courses/cs4110/2018fa/lectures/lecture22.pdf
 // https://www.cl.cam.ac.uk/teaching/1415/L28/lambda.pdf
 // https://crypto.stanford.edu/~blynn/lambda/systemf.html
-// https://www.cs.cornell.edu/courses/cs4110/2018fa/lectures/lecture22.pdf
 
 // Dep
 const { equal } = require("saman");
@@ -91,7 +91,7 @@ class TypeEnv {
     }
 
     addBinding(name, type) {
-        if(name in env) defInScope(name);
+        if(name in this.env) defInScope(name);
         this.env[name] = type;
     }
 
