@@ -3,13 +3,21 @@ const TypeChecker = require("./type");
 const parser = new Parser();
 const check = new TypeChecker();
 
-const ops = ["ADD", "SUB", "DIV", "MUL"];
+const ops = ["ADD", "SUB", "DIV", "MUL", "LBR", "AND", "OR", "GT", "LT", "EQ", "NEG", "NOT"];
+
 const sym = {
-    "ADD":"+",
-    "MUL":"*",
-    "DIV":"/",
-    "SUB":"-"
-}
+    "ADD": "+",
+    "MUL": "*",
+    "SUB": "-",
+    "DIV": "/",
+    "AND": "&&",
+    "OR": "||",
+    "GT": ">",
+    "LT": "<",
+    "NOT": "!",
+    "NEG": "-",
+    "EQ": "==="
+};
 
 function transform(ast) {
     if(ast.node == "var") return ast.name;
