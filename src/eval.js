@@ -2,7 +2,7 @@
 const { Expr } = require("./ast");
 const { tagged } = require("styp");
 const Parser = require("./parser");
-const TypeChecker = require("./type");
+const { TypeChecker, PrimTypes } = require("./type");
 
 // Eval types
 const call_by_need = 0;
@@ -102,6 +102,14 @@ pair.prototype.apply = function(f) {
 pair.prototype.toString = function() {
     return `(${this.fst},${this.snd})`;
 }
+
+// WIP
+// const print = {
+//     apply(f) {
+//         console.log(f);
+//         return PrimTypes.unit
+//     }
+// };
 
 const opfuns = {
     "ADD": (a,b) => a + b,
