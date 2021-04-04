@@ -3,6 +3,7 @@ const { Expr } = require("./ast");
 const { tagged } = require("styp");
 const Parser = require("./parser");
 const { TypeChecker, PrimTypes } = require("./type");
+const Prelude = require("./prelude");
 
 // Eval types
 const call_by_need = 0;
@@ -142,6 +143,7 @@ class Interpreter {
         this.checker = new TypeChecker();
         this.mode = call_by_value;
         this.global = global?global:GLOBAL;
+        Prelude.forEach(f => this.evaluate(f));
     }
 
     setMode(mode) {
