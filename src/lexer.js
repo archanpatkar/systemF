@@ -1,11 +1,7 @@
 const symbols = [
     "(", ")", "\\", ".", "+", "-", "&", "=", "[", "]",
-    "<", ">", "=", "/", "*", "->",":", "?",",","$"
+    "<", ">", "=", "/", "*", "->",":", "?",",","$", "@"
 ];
-
-// temp extra
-// token_name.set("@","FORALL");
-// "@", "|", "fix",
 
 const types = ["number", "bool", "unit"];
 const keywords = [
@@ -38,6 +34,7 @@ token_name.set("not", "NOT");
 token_name.set("and", "AND");
 token_name.set("or", "OR");
 token_name.set("?","TYPELAM");
+token_name.set("@","FORALL");
 
 const white = [" ", "\n", "\b", "\t", "\r"];
 function isWhite(c) {

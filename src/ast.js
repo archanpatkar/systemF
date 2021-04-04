@@ -10,9 +10,7 @@ const Expr = sum("Expr", {
     Cond: ["cond", "e1", "e2"],
     Let: ["name","e1","e2"],
     BinOp: ["op","l","r"],
-    UnOp: ["op","v"],
-    // Pair: ["fst","snd"],
-    Fix: ["e"]
+    UnOp: ["op","v"]
 });
 
 module.exports = {

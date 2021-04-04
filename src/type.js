@@ -52,6 +52,7 @@ function convertType(type) {
     if(type === "unit") return TUnit;
     if(typeof type === "string") return Type.TVar(type);
     if(Array.isArray(type)) return Type.TArr(convertType(type[0]),convertType(type[0]));
+    if(typeof type === "object") return Scheme.Forall([Type.TVar(type.var)],convertType(type.type));
 }
 
 function printType(type,level=0) {
@@ -196,14 +197,6 @@ class TypeChecker {
         map[t1.var[0].v] = t2;
         return this.rename(t1,map);
     }
-
-    checkFix(ast,env) {
-        // const t = this.infer(ast.e,env);
-        // const tv = this.fresh();
-        // this.addConstraint(Type.TArr(tv,tv), t);
-        // this.unify(Type.TArr(tv,tv),t);
-        // return this.apply(tv);
-    }  
 
     checkUnOp(ast,env) {
         const t = this.check(ast.v,env);

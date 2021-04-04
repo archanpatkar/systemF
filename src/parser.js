@@ -40,6 +40,11 @@ const handlers = {
             this.expect(null,"'->' is not a unary operator");
         } 
     },
+    "FORALL": {
+        nud() {
+            this.expect(null,"'@' is not a unary operator");
+        } 
+    },
     "IDEN": {
         nud(token) {
             return Expr.Var(token.value);
@@ -302,6 +307,13 @@ class Parser {
             this.consume();
             t = this.type("(");
             this.expect("RPAREN","Mismatched '(' in type");
+        }
+        if(curr.type === "FORALL") {
+            this.consume();
+            const v = this.expect("IDEN","Expected a variable").value;
+            this.expect("DOT","Expected '.'");
+            t = this.type(".");
+            return { var:v, type:t };
         }
         else if(curr.type === "IDEN" || curr.type === "TYPE") t = this.consume().value;
         if(this.peek().type == "TO") {
