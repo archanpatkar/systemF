@@ -364,9 +364,4 @@ class Parser {
     }
 }
 
-// const p1 = new Parser();
-// let node = p1.parse("?a. \\x:(a->(a->int))->b. x")
-// console.log(node.body.type);
-// console.log(p1.parse("(?a. \\x:a. x) [number]").toString());
-// console.log(p1.parse("(?a. \\x:a. x+5) [number]").toString());
 module.exports = Parser;
