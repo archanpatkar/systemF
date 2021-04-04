@@ -256,12 +256,4 @@ class TypeChecker {
     }
 }
 
-// (\x:@X.X->X. x [@X. X->X] x) (?a. \x:a. x)
-// let Pair = (?t1. ?t2. \x:t1. \y:t2. ?r. \f:t1->t2->r. f x y)
-// (Pair [number] [number] 10 20) [number] (\x:number. \y:number. x)
-// let id = (?t. \x:t. x)
-// id [int] 10
-// id [int] 10
-// (?a. \x:a->a. x) [int->int]
-// (\x:int->int. x 3) (\x:int. x + 10)
 module.exports = { TypeChecker, PrimTypes };

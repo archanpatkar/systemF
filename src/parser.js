@@ -18,7 +18,8 @@ const not = ["EOF", "DEFT", "DOT", "RPAREN", "BODY", "IN", "THEN", "ELSE", "COMM
 // div - 6
 // neg - 7
 // not - 7
-// apply - 8
+// Type apply - 8
+// apply - 9
 const handlers = {
     "COMMA": {
         nud() {
@@ -254,7 +255,7 @@ const handlers = {
         }
     },
     "APPLY": {
-        lbp:8,
+        lbp:9,
         led(left) {
             const right = this.expression(this.lbp);
             return Expr.App(left,right);
@@ -358,7 +359,7 @@ class Parser {
         this.tokens = tokenize(str);
         const e = this.expression(0);
         const token = this.peek();
-        if(token.value != 0 && not.includes(token.type)) this.expect(null,`Unexpected keyword ${token.value}`)
+        if(token.value !== 0 && not.includes(token.type)) this.expect(null,`Unexpected keyword ${token.value}`)
         return e;
     }
 }
