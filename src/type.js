@@ -4,6 +4,7 @@
 // https://www.cl.cam.ac.uk/teaching/1415/L28/lambda.pdf
 // https://crypto.stanford.edu/~blynn/lambda/systemf.html
 
+// TODO: Improve and optimize
 // Dep
 const { equal } = require("saman");
 const { sum, tagged } = require("styp");
