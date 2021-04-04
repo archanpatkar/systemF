@@ -192,9 +192,9 @@ class Interpreter {
         });
     }
 
-    erase(ast) {
+    // erase(ast) {
         // Write code to erase the types/type lams and type apps from the ast
-    }
+    // }
 
     evaluate(str) {
         const ast = this.parser.parse(str);
