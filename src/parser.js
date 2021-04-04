@@ -311,7 +311,7 @@ class Parser {
         if(curr.type === "FORALL") {
             this.consume();
             const v = this.expect("IDEN","Expected a variable").value;
-            this.expect("DOT","Expected '.'");
+            this.expect("BODY","Expected '.'");
             t = this.type(".");
             return { var:v, type:t };
         }

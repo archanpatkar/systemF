@@ -73,7 +73,7 @@ function printType(type,level=0) {
 const genericError = (msg) => { throw new Error(msg) };
 const notInScope = (name) => genericError(`Variable --> '${name}' not in Scope`);
 const defInScope = (name) => genericError(`Cannot redefine Variable: '${name}'`);
-const notType = (type,msg) => genericError(`Expected type '${printType(type)}' ${msg}`);
+// const notType = (type,msg) => genericError(`Expected type '${printType(type)}' ${msg}`);
 const notAType = (type) => genericError(`Expected a type`);
 const typeMismatch = (type1,type2) => genericError(`Couldn't match the expected type: ${printType(type1)} with type: ${printType(type2)}`);
 const nonFunction = (type) => genericError(`Tried to apply to non-Function type --> ${type}`);
@@ -111,6 +111,7 @@ class TypeChecker {
     constructor() {
         this.env = new TypeEnv(null);
         this.tenv = new TypeEnv(null);
+        this.varInit();
     }
 
     varInit() {
@@ -121,22 +122,46 @@ class TypeChecker {
         }
     }
 
-    // fresh() {
-    //     const pair = this.names[this.count++ % 25];
-    //     let n = pair[1]++;
-    //     return Type.TVar(`${pair[0]}${n?n:""}`);
-    // }
+    fresh() {
+        const pair = this.names[this.count++ % 25];
+        let n = pair[1]++;
+        return Type.TVar(`${pair[0]}${n?n:""}`);
+    }
+
+    rename(scheme,map) {
+        if(Type.TCon.is(scheme)) return scheme;
+        if(Type.TVar.is(scheme)) return (scheme.v in map) ?map[scheme.v]:scheme;
+        if(Type.TArr.is(scheme)) return Type.TArr(
+            this.rename(scheme.t1,map),
+            this.rename(scheme.t2,map)
+        );
+        if(Scheme.Forall.is(scheme)) return Scheme.Forall(scheme.var,this.rename(scheme.type,map));
+        return null;
+    }
 
     verifyType(type) {
         return Type.is(type) || Scheme.is(type);
+    }
+
+    equalTypes(t1,t2) {
+        if(Scheme.Forall.is(t1) && Scheme.Forall.is(t2)) {
+            const tv = this.fresh();
+            const map = {}
+            map[t1.var[0].v] = tv;
+            map[t2.var[0].v] = tv;
+            const mt1 = this.rename(t1.type,map);
+            const mt2 = this.rename(t2.type,map);
+            return this.equalTypes(mt1,mt2);
+        }
+        return equal(t1,t2);
     }
 
     checkCond(ast,env) {
         const cond = this.check(ast.cond, env);
         const t1 = this.check(ast.e1, env);
         const t2 = this.check(ast.e2, env);
-        if(!equal(cond,TBool)) typeMismatch(TBool,cond);
-        if(!equal(t1,t2)) typeMismatch(t1,t2);
+        if(!this.equalTypes(cond,TBool)) typeMismatch(TBool,cond);
+        if(!this.equalTypes(t1,t2)) typeMismatch(t1,t2);
         return t1;
     }
 
@@ -173,19 +198,8 @@ class TypeChecker {
         const t1 = this.check(ast.e1, env);
         const t2 = this.check(ast.e2, env);
         if(!Type.TArr.is(t1)) nonFunction(t1);
-        if(!equal(t1.t1,t2)) typeMismatch(t1.t1,t2);
+        if(!this.equalTypes(t1.t1,t2)) typeMismatch(t1.t1,t2);
         return t1.t2;
-    }
-
-    rename(scheme,map) {
-        if(Type.TCon.is(scheme)) return scheme;
-        if(Type.TVar.is(scheme)) return (scheme.v in map) ?map[scheme.v]:scheme;
-        if(Type.TArr.is(scheme)) return Type.TArr(
-            this.rename(scheme.t1,map),
-            this.rename(scheme.t2,map)
-        );
-        if(Scheme.Forall.is(scheme)) return Scheme.Forall(scheme.var,this.rename(scheme.type,map));
-        return null;
     }
 
     checkTApp(ast,env) {
@@ -201,7 +215,7 @@ class TypeChecker {
     checkUnOp(ast,env) {
         const t = this.check(ast.v,env);
         const op = optypes[ast.op];
-        if(!equal(op.t1,t)) typeMismatch(op.t1,t);
+        if(!this.equalTypes(op.t1,t)) typeMismatch(op.t1,t);
         return op.t2;
     }
     
@@ -215,8 +229,8 @@ class TypeChecker {
             op = this.rename(op.type,map);
         }
         if(Type.is(op)) {
-            if(!equal(op.t1,t1)) typeMismatch(op.t1,t1);
-            if(!equal(op.t2.t1,t2)) typeMismatch(op.t2.t1,t2);
+            if(!this.equalTypes(op.t1,t1)) typeMismatch(op.t1,t1);
+            if(!this.equalTypes(op.t2.t1,t2)) typeMismatch(op.t2.t1,t2);
             return op.t2.t2;
         }
         return TUnit;
@@ -231,7 +245,6 @@ class TypeChecker {
             Cond: c => this.checkCond(c,env),
             Lam: l => this.checkLam(l,env),
             App: a => this.checkApp(a,env),
-            Fix: f => this.checkFix(f,env),
             TApp: a => this.checkTApp(a,env),
             TLam: t => this.checkTLam(t,env),
             Let: lb => this.checkLet(lb,env)
@@ -243,6 +256,7 @@ class TypeChecker {
     }
 }
 
+// (\x:@X.X->X. x [@X. X->X] x) (?a. \x:a. x)
 // let Pair = (?t1. ?t2. \x:t1. \y:t2. ?r. \f:t1->t2->r. f x y)
 // (Pair [number] [number] 10 20) [number] (\x:number. \y:number. x)
 // let id = (?t. \x:t. x)
