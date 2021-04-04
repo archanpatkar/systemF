@@ -12,10 +12,7 @@ const { sum, tagged } = require("styp");
 const Type = sum("Types", {
     TVar: ["v"],
     TCon: ["name"],
-    TArr: ["t1", "t2"]
-});
-
-const Scheme = sum("Scheme", {
+    TArr: ["t1", "t2"],
     Forall: ["var", "type"]
 });
 
@@ -40,7 +37,7 @@ const optypes = {
     "LT": Type.TArr(TNumber,Type.TArr(TNumber,TBool)),
     "NOT": Type.TArr(TBool,TBool),
     "NEG": Type.TArr(TNumber,TNumber),
-    "EQ": Scheme.Forall(
+    "EQ": Type.Forall(
         [Type.TVar("o1")],
         Type.TArr(Type.TVar("o1"),Type.TArr(Type.TVar("o1"),TBool))
     )
@@ -52,28 +49,22 @@ function convertType(type) {
     if(type === "unit") return TUnit;
     if(typeof type === "string") return Type.TVar(type);
     if(Array.isArray(type)) return Type.TArr(convertType(type[0]),convertType(type[1]));
-    if(typeof type === "object") return Scheme.Forall([Type.TVar(type.var)],convertType(type.type));
+    if(typeof type === "object") return Type.Forall([Type.TVar(type.var)],convertType(type.type));
 }
 
 function printType(type,level=0) {
-    return Type.is(type) ?
-        type.cata({
-            TCon: ({ name }) => name,
-            TVar: ({ v }) => v,
-            TArr: ({ t1, t2 }) => {
-                return `${level%3?"(":""}${printType(t1,level+1)} -> ${printType(t2,level+1)}${level%3?")":""}`;
-            }
-        }):
-        Scheme.is(type) && type.var.length ?
-        `forall ${type.var.map(e => printType(e)).join(" ")}. ${printType(type.type)}`:
-        printType(type.type)
+    return type.cata({
+        TCon: ({ name }) => name,
+        TVar: ({ v }) => v,
+        TArr: ({ t1, t2 }) => `${level%3?"(":""}${printType(t1,level+1)} -> ${printType(t2,level+1)}${level%3?")":""}`,
+        Forall: f => f.var.length?`forall ${f.var.map(e => printType(e)).join(" ")}. ${printType(f.type)}`: printType(f.type)
+    });
 }
 
 // Errors
 const genericError = (msg) => { throw new Error(msg) };
 const notInScope = (name) => genericError(`Variable --> '${name}' not in Scope`);
 const defInScope = (name) => genericError(`Cannot redefine Variable: '${name}'`);
-// const notType = (type,msg) => genericError(`Expected type '${printType(type)}' ${msg}`);
 const notAType = (type) => genericError(`Expected a type`);
 const typeMismatch = (type1,type2) => genericError(`Couldn't match the expected type: ${printType(type1)} with type: ${printType(type2)}`);
 const nonFunction = (type) => genericError(`Tried to apply to non-Function type --> ${type}`);
@@ -128,23 +119,21 @@ class TypeChecker {
         return Type.TVar(`${pair[0]}${n?n:""}`);
     }
 
-    rename(scheme,map) {
-        if(Type.TCon.is(scheme)) return scheme;
-        if(Type.TVar.is(scheme)) return (scheme.v in map) ?map[scheme.v]:scheme;
-        if(Type.TArr.is(scheme)) return Type.TArr(
-            this.rename(scheme.t1,map),
-            this.rename(scheme.t2,map)
-        );
-        if(Scheme.Forall.is(scheme)) return Scheme.Forall(scheme.var,this.rename(scheme.type,map));
-        return null;
+    rename(type,map) {
+        return type.cata({
+            TCon: t => t,
+            TVar: ({ v }) => v in map? map[v]:Type.TVar(v),
+            TArr: ({ t1, t2 }) => Type.TArr(this.rename(t1,map), this.rename(t2,map)),
+            Forall: f => Type.Forall(f.var,this.rename(f.type,map))
+        });
     }
 
     verifyType(type) {
-        return Type.is(type) || Scheme.is(type);
+        return Type.is(type);
     }
 
     equalTypes(t1,t2) {
-        if(Scheme.Forall.is(t1) && Scheme.Forall.is(t2)) {
+        if(Type.Forall.is(t1) && Type.Forall.is(t2)) {
             const tv = this.fresh();
             const map = {}
             map[t1.var[0].v] = tv;
@@ -182,7 +171,7 @@ class TypeChecker {
         this.tenv.addBinding(tv.v, true);
         const body = this.check(ast.body, env);
         this.tenv.removeBinding(tv.v);
-        return Scheme.Forall([tv],body);
+        return Type.Forall([tv],body);
     }
 
     checkLam(ast,env) {
@@ -206,7 +195,7 @@ class TypeChecker {
         const t1 = this.check(ast.tl, env);
         const t2 = convertType(ast.t);
         if(!this.verifyType(t2)) notAType(t2);
-        if(!Scheme.Forall.is(t1)) nonGenFunction(t1);
+        if(!Type.Forall.is(t1)) nonGenFunction(t1);
         const map = {}
         map[t1.var[0].v] = t2;
         return this.rename(t1.type,map);
@@ -223,7 +212,7 @@ class TypeChecker {
         const t1 = this.check(ast.l,env);
         const t2 = this.check(ast.r,env);
         let op = optypes[ast.op];
-        if(Scheme.Forall.is(op)) {   
+        if(Type.Forall.is(op)) {   
             const map = {}
             map[op.var[0].v] = t1;
             op = this.rename(op.type,map);
