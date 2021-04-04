@@ -51,7 +51,7 @@ function convertType(type) {
     if(type === "bool") return TBool;
     if(type === "unit") return TUnit;
     if(typeof type === "string") return Type.TVar(type);
-    if(Array.isArray(type)) return Type.TArr(convertType(type[0]),convertType(type[0]));
+    if(Array.isArray(type)) return Type.TArr(convertType(type[0]),convertType(type[1]));
     if(typeof type === "object") return Scheme.Forall([Type.TVar(type.var)],convertType(type.type));
 }
 
@@ -121,11 +121,11 @@ class TypeChecker {
         }
     }
 
-    fresh() {
-        const pair = this.names[this.count++ % 25];
-        let n = pair[1]++;
-        return Type.TVar(`${pair[0]}${n?n:""}`);
-    }
+    // fresh() {
+    //     const pair = this.names[this.count++ % 25];
+    //     let n = pair[1]++;
+    //     return Type.TVar(`${pair[0]}${n?n:""}`);
+    // }
 
     verifyType(type) {
         return Type.is(type) || Scheme.is(type);
@@ -179,12 +179,12 @@ class TypeChecker {
 
     rename(scheme,map) {
         if(Type.TCon.is(scheme)) return scheme;
-        if(Type.TVar.is(scheme)) return map[scheme.v];
+        if(Type.TVar.is(scheme)) return (scheme.v in map) ?map[scheme.v]:scheme;
         if(Type.TArr.is(scheme)) return Type.TArr(
             this.rename(scheme.t1,map),
             this.rename(scheme.t2,map)
         );
-        if(Scheme.Forall.is(scheme)) return this.rename(scheme.type,map);
+        if(Scheme.Forall.is(scheme)) return Scheme.Forall(scheme.var,this.rename(scheme.type,map));
         return null;
     }
 
@@ -195,7 +195,7 @@ class TypeChecker {
         if(!Scheme.Forall.is(t1)) nonGenFunction(t1);
         const map = {}
         map[t1.var[0].v] = t2;
-        return this.rename(t1,map);
+        return this.rename(t1.type,map);
     }
 
     checkUnOp(ast,env) {
@@ -209,25 +209,18 @@ class TypeChecker {
         const t1 = this.check(ast.l,env);
         const t2 = this.check(ast.r,env);
         let op = optypes[ast.op];
+        if(Scheme.Forall.is(op)) {   
+            const map = {}
+            map[op.var[0].v] = t1;
+            op = this.rename(op.type,map);
+        }
         if(Type.is(op)) {
             if(!equal(op.t1,t1)) typeMismatch(op.t1,t1);
             if(!equal(op.t2.t1,t2)) typeMismatch(op.t2.t1,t2);
             return op.t2.t2;
         }
-        // if(Scheme.Forall.is(op)) {
-        //     if(!equal(t1,t2)) typeMismatch(,t1);
-        //     this.rename(scheme,)
-        // }
         return TUnit;
     }
-
-    // Pair: p => this.inferPair(p,env),
-    // checkPair(ast,env) {
-        // const fst = this.infer(ast.fst,env);
-        // const snd = this.infer(ast.snd,env);
-        // const tv = this.fresh();
-        // return Type.TArr(Type.TArr(fst,Type.TArr(snd,tv)),tv);
-    // }
 
     check(ast, env = this.env) {
         return ast.cata({
@@ -250,6 +243,8 @@ class TypeChecker {
     }
 }
 
+// let Pair = (?t1. ?t2. \x:t1. \y:t2. ?r. \f:t1->t2->r. f x y)
+// (Pair [number] [number] 10 20) [number] (\x:number. \y:number. x)
 // let id = (?t. \x:t. x)
 // id [int] 10
 // id [int] 10
