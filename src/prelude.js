@@ -18,3 +18,7 @@
 // let case = (?t1. ?t2. ?j. \v:@r.(t1->r)->(t2->r)->r. \b1:t1->j. \b2:t2->j. v [j] b1 b2)
 //  (case [number] [bool] [number]) (inl [number] [bool] 10) (\x:number. x * 2) (\x:bool. 0)
 // (case [number] [bool] [bool]) (inr [number] [bool] true) (\x:number. not true) (\x:bool. x)
+
+// maybe new syntax
+// let f1 x:number, y:bool = 
+// let f1<a,b,c> x:a, y:b = 
