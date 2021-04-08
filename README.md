@@ -1,6 +1,6 @@
 <div align="center">
 <img src="./static/logo.png" />
-<h3>Polymorhpic Lambda Calculus</h3>
+<h3>Polymorphic Lambda Calculus</h3>
 </div>
 
 System F polymorphic/second-order lambda calculus. This implements *Lambdas*, *Type Lambdas*, *Type Quantification*, *Let Bindings* etc.  
