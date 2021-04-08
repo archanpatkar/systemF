@@ -4,7 +4,7 @@ const tokenize = require("./lexer");
 const { Expr } = require("./ast");
 
 const ops = ["ADD", "SUB", "DIV", "MUL", "LBR", "AND", "OR", "GT", "LT", "EQ", "NEG", "NOT"];
-const not = ["EOF", "DEFT", "DOT", "RPAREN", "BODY", "IN", "THEN", "ELSE", "COMMA"];
+const not = ["EOF", "DEFT", "DOT", "RPAREN", "RBR", "BODY", "IN", "THEN", "ELSE", "COMMA"];
 
 // Prec table
 // or - 1
